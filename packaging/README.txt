@@ -68,6 +68,7 @@ same time:
   Esc or Enter      Start: pause (the watch menu)
   Tab               Objectives / scores
   Arrow keys        D-pad
+  Tilt the pad      Gyro aiming, when it is on (see SETTINGS)
 
 In the menus the mouse moves the game's crosshair, E selects (the A button)
 and Esc or right click goes back. Keys can be changed in Help & Options > Keyboard & Mouse, or on the
@@ -78,7 +79,8 @@ SETTINGS
 
 Help & Options on the main menu holds the PC settings:
   Keyboard & Mouse   mouse look, sensitivity, precise aim sensitivity,
-                     invert look, key bindings
+                     invert look, gyro aiming (off, while aiming, always;
+                     sensitivity, turn axis, invert), key bindings
   Video Settings     windowed or fullscreen, window size (up to 3840x2160),
                      screen ratio (4:3, 16:9 or 21:9; the window sizes
                      offered follow it), V-Sync, render scale (1x =
@@ -103,6 +105,15 @@ Preset applies the same settings on any PC.
 On SteamOS or Bazzite, add GoldenEye 007.exe to Steam as a non-Steam game
 with Proton as its compatibility tool and run setup from there. Under Proton
 the game uses Vulkan by itself; Direct3D 12 there crashes on AMD.
+
+Gyro aiming: the preset turns it on while precise aim is held. The game reads
+the gyroscope of PlayStation-style pads, Switch Pro pads and the Steam Deck's
+own controls. The Legion Go and ROG Ally present Xbox-style controls, which
+carry no gyroscope; a tool that presents them as a PlayStation pad (Handheld
+Companion on Windows, Handheld Daemon on Bazzite) gives the game a gyroscope
+it can read. Steam Input's or Legion Space's "gyro as mouse" works too,
+through mouse look; use one or the other. Settings are in Help & Options >
+Keyboard & Mouse.
 
 SPLIT-SCREEN
 ------------
