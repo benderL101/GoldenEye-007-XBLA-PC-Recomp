@@ -104,6 +104,15 @@ On SteamOS or Bazzite, add GoldenEye 007.exe to Steam as a non-Steam game
 with Proton as its compatibility tool and run setup from there. Under Proton
 the game uses Vulkan by itself; Direct3D 12 there crashes on AMD.
 
+SPLIT-SCREEN
+------------
+
+Main menu > Multiplayer > Split Screen: 2 to 4 players on this PC, one
+controller each. Every controller plugged in is its own player, in the order
+it was connected; the keyboard and mouse count as player 1's controller. On
+a handheld the built-in controls are player 1, so each further player needs
+a controller of their own (Bluetooth or USB).
+
 MULTIPLAYER OVER LAN OR A VIRTUAL LAN
 -------------------------------------
 
@@ -112,7 +121,9 @@ Main menu > Multiplayer > LAN or Virtual LAN:
   Join Match     lists the games on your network. The list keeps refreshing,
                  so a game hosted after you opened it still shows up.
 In the lobby the host points the crosshair at the START tab and presses A
-(E on the keyboard) once everyone has joined.
+(E on the keyboard) once everyone has joined. Players at one PC can join a
+LAN match together: Screen Layout in the lobby splits the screen between
+the players at that PC only.
 
 This works on a home network and over a virtual LAN (Radmin VPN, ZeroTier,
 Tailscale, Hamachi and the like) when every player joins the same virtual
