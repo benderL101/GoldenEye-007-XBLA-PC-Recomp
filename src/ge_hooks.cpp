@@ -2597,6 +2597,11 @@ void ge_mouse_camera(uint8_t* base) {
   float mdx = static_cast<float>(ge_take_mouse_dx());
   float mdy = static_cast<float>(ge_take_mouse_dy());
   if (!mouse_on) mdx = mdy = 0.f;
+  // When the mouse last moved the view: the Look Ahead setting below is only
+  // taken away from a player who is actually using the mouse.
+  static uint64_t mouse_last_ms = 0;
+  if (mdx != 0.f || mdy != 0.f) mouse_last_ms = GetTickCount64();
+  const bool mouse_in_use = mouse_last_ms != 0 && GetTickCount64() - mouse_last_ms < 3000;
   // The pad's gyroscope, drained every frame so a turn made while the view is
   // held (a level loading, a cutscene, the PC menu) is dropped, not saved up
   // and applied as one jump when control returns. Applied below, with the
@@ -2652,12 +2657,17 @@ void ge_mouse_camera(uint8_t* base) {
   // multiplayer and caused the camera jitter.) Auto-aim used to be cleared here
   // by default, so turning Auto-Aim on in the options or the watch was undone
   // at the next pause and did nothing.
+  // Look Ahead (the view pitching by itself as Bond moves) fights the mouse,
+  // which is why it goes; but it used to go for everyone with Mouse Look on,
+  // the default, so a player on the sticks alone (a handheld) who turned it
+  // on in the watch lost it at the next pause. Now it only goes when the
+  // mouse has moved the view in the last few seconds.
   if (game_pause_flag != prev_pause || game_control_disabled != prev_disabled) {
     const uint32_t sp = LD32(base, GE_SETTINGS_PTR);
     if (sp) {
       const uint32_t sva = sp + GE_SETTINGS_BITS;
       uint32_t settings = LD32(base, sva);
-      if (settings & GE_SET_LookAhead) settings &= ~(uint32_t)GE_SET_LookAhead;
+      if (mouse_in_use && (settings & GE_SET_LookAhead)) settings &= ~(uint32_t)GE_SET_LookAhead;
       if (disable_autoaim && (settings & GE_SET_AutoAim))
         settings &= ~(uint32_t)GE_SET_AutoAim;
       ST32(base, sva, settings);
