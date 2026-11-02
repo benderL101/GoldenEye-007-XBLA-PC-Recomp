@@ -158,9 +158,38 @@ console.
 - Fixed the spike, fin and flat band sticking out of Dam's mountains with old graphics.
 - Other Misc fixes.
 
+## Handhelds: Legion Go, Steam Deck, ROG Ally
+
+The game knows these handhelds and sets itself up for them. The first time it
+starts on one it applies the **handheld preset**: fullscreen on the device's
+own screen, render scale 1x (1280×720, which the chip holds at 60 FPS) with FSR
+stretching the picture to the panel, anti-aliasing off, and the screen ratio
+following the screen (16:9 on the 16:10 panels of the Legion Go and Steam Deck,
+with thin bars top and bottom). Setup ticks *Start in fullscreen* for you there
+too. After that your own changes in Video Settings stand; the preset is
+applied once and recorded as `ge_handheld_preset = "applied"` in `ge.toml`.
+Set it to `"off"` to stop the game applying it by itself, or choose **Video
+Settings → Handheld Preset** to apply it on any PC. The device the game found
+is written at the top of every log.
+
+**Windows handhelds** (Legion Go, Legion Go S and Go 2 on Windows, ROG Ally):
+set up and play as on any PC, then add `GoldenEye 007.exe` to Legion Space,
+Armoury Crate or Steam as you like. An Xbox-style built-in controller works
+as on the console.
+
+**SteamOS and Bazzite** (Steam Deck, Legion Go S with SteamOS, a Legion Go
+with Bazzite): extract the release in Desktop Mode, add `GoldenEye 007.exe`
+to Steam as a non-Steam game, set its compatibility tool to Proton, and run
+setup from there. Under Wine or Proton the game takes its native renderer's
+Vulkan path by itself (`gpu_native_api = "vulkan"`): Direct3D 12 there would
+run through VKD3D-Proton, which rejects one of this game's texture
+descriptors on AMD and crashes the game as the first level loads. Set
+`gpu_native_api = "d3d12"` in `ge.toml` if you want to try that path anyway.
+
 ## Known limitations
 
-- Windows only for now.
+- Windows only for now (a Windows program; on SteamOS and Bazzite it runs
+  under Proton, see Handhelds above).
 - Only the GoldenEye 007 Xbox Live Arcade package with Title ID `584108A9`
   and the exact game program this port was recompiled from is supported;
   setup refuses other builds.

@@ -26,6 +26,7 @@
 #include <thread>
 #include <vector>
 
+#include "ge_device.h"
 #include "ge_gpu_detect.h"
 #include "ge_init.h"  // PPCRegister/PPCContext + generated function decls
 
@@ -56,6 +57,8 @@ void ApplyUpscaling();                          // below
 std::wstring LauncherPath();                    // ge_hooks.cpp
 void RunSetupAgain();                           // ge_hooks.cpp
 void PersistSettings();                         // below
+void ApplyHandheldPresetValues();               // below
+std::string HandheldPresetText();               // below
 }
 
 namespace {
@@ -499,6 +502,19 @@ std::vector<Row> BuildPage(Page page) {
       // No Frame Limit row: the game always runs at its own 60 FPS (its clock
       // is the 60 Hz vblank; a lower cap slowed the game itself down).
       rows.push_back(Row{RowKind::Toggle, "Show FPS:", "ge_show_fps"});
+      // Handheld Preset: the settings for a Legion Go, Steam Deck or ROG Ally
+      // (fullscreen, 1x render scale with FSR, no MSAA). The game applies it
+      // by itself the first time it starts on one of those; this row applies
+      // it by hand, on any PC. The value names the handheld found.
+      AddAction(
+          rows, "Handheld Preset:",
+          [] {
+            ge::ApplyHandheldPresetValues();
+            SetS("ge_handheld_preset", "applied");
+            if (g_request_fullscreen) g_request_fullscreen(true);
+            if (g_persist) g_persist();
+          },
+          [] { return ge::HandheldPresetText(); });
       AddAction(rows, "Post-Processing", [] { g_page = Page::PostFx; });
       // Run Setup Again is the last row of Other Settings.
       AddAction(rows, "Done", [] {
@@ -931,6 +947,62 @@ void SetActiveRenderer(bool native) { g_renderer_active = native ? 1 : 0; }
 bool NativeRendererActive() { return g_renderer_active == 1; }
 void SetWindowSizeHandler(std::function<void(int, int)> handler) {
   g_window_size = std::move(handler);
+}
+}  // namespace ge
+
+// ------------------------------------------------------------ handhelds ---
+// Handheld preset (ge_handheld_preset, Video Settings > Handheld Preset): the
+// settings a Legion Go, Steam Deck or ROG Ally wants. "auto" (the default)
+// applies them once, the first time the game starts on one of those (the
+// device is read from the firmware, see ge_device.cpp), and records
+// "applied"; after that the player's own changes stand. "off" never applies
+// them by itself. The row in Video Settings applies them on any PC.
+REXCVAR_DEFINE_STRING(ge_handheld_preset, "auto", "Video",
+                      "Handheld preset: auto (applied once on a Legion Go, Steam Deck or ROG "
+                      "Ally), applied, off")
+    .allowed({"auto", "applied", "off"});
+namespace ge {
+// The preset's values. Fullscreen on the handheld's own screen; the game drawn
+// at 1x (1280x720, which these chips hold at 60 FPS) and FSR stretching it to
+// the panel (2560x1600 on a Legion Go); no MSAA; the Screen Ratio following
+// the screen (16:9 on a 16:10 panel, with thin bars). V-Sync and texture
+// filtering keep their defaults.
+void ApplyHandheldPresetValues() {
+  rex::cvar::SetFlagByName("fullscreen", "true");
+  rex::cvar::SetFlagByName("ge_render_scale", "1");
+  rex::cvar::SetFlagByName("ge_upscaling", "on");
+  rex::cvar::SetFlagByName("gpu_native_msaa", "1");
+  rex::cvar::SetFlagByName("ge_screen_ratio", "auto");
+  rex::cvar::SetFlagByName("ge_show_fps", "false");
+}
+std::string HandheldPresetText() {
+  if (GetS("ge_handheld_preset") == "applied") return "Applied";
+  const DeviceInfo& d = DetectDevice();
+  return d.handheld ? d.name : "OFF";
+}
+// At start-up, once the config is loaded and before the renderer or window
+// exist (ge_app.h). Returns true when ge.toml should be saved.
+bool ApplyDevicePreset() {
+  const DeviceInfo& d = DetectDevice();
+  bool changed = false;
+  // Wine and Proton: Direct3D 12 there is VKD3D-Proton translating to Vulkan,
+  // and on AMD it rejects one of this game's texture descriptors (the bloom
+  // pass) and takes the game down as the first level loads. The native
+  // renderer's own Vulkan path has no translator in between, so take it
+  // unless ge.toml names an API.
+  if (d.wine && GetS("gpu_native_api") == "auto") {
+    rex::cvar::SetFlagByName("gpu_native_api", "vulkan");
+    REXLOG_INFO("Device: running under Wine or Proton: native renderer on Vulkan");
+    changed = true;
+  }
+  if (d.handheld && GetS("ge_handheld_preset") == "auto") {
+    ApplyHandheldPresetValues();
+    rex::cvar::SetFlagByName("ge_handheld_preset", "applied");
+    REXLOG_INFO("Device: {} found: handheld preset applied (fullscreen, 1x render scale, FSR)",
+                d.name);
+    changed = true;
+  }
+  return changed;
 }
 }  // namespace ge
 
@@ -1422,6 +1494,17 @@ void LogSessionHeader() {
               g_scale_gpu.name.empty() ? "unknown" : g_scale_gpu.name,
               g_scale_gpu.integrated ? "integrated" : "dedicated", g_scale_gpu.video_memory_mb,
               g_scale_gpu.driver.empty() ? "unknown" : g_scale_gpu.driver);
+  {
+    const DeviceInfo& d = DetectDevice();
+    std::string model = d.manufacturer.empty() && d.product.empty()
+                            ? "unknown"
+                            : d.manufacturer + " " + d.product;
+    if (!d.version.empty()) model += " (" + d.version + ")";
+    REXLOG_INFO("Device: {}; {}; {}", model,
+                d.handheld ? d.name + ", handheld preset " + GetS("ge_handheld_preset")
+                           : "not a known handheld",
+                d.wine ? "Wine or Proton" : "Windows");
+  }
   REXLOG_INFO("Display: {}; {} {}x{}", StartupDisplayMode(std::atoi(GetS("monitor").c_str())),
               GetB("fullscreen") ? "fullscreen, window" : "windowed", GetS("ge_window_width"),
               GetS("ge_window_height"));

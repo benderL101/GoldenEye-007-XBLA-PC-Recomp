@@ -90,6 +90,20 @@ Help & Options on the main menu holds the PC settings:
   Online Settings    player name and the online server options
   Other Settings     the game's own options, plus Run Setup Again
 
+HANDHELDS (LEGION GO, STEAM DECK, ROG ALLY)
+-------------------------------------------
+
+On one of these the game sets itself up the first time it starts: fullscreen
+on the device's screen, render scale 1x with FSR stretching the picture to
+the panel, anti-aliasing off, screen ratio following the screen. Setup ticks
+"start in fullscreen" for you there too. After that your own changes in
+Video Settings stand (the preset is applied once). Video Settings > Handheld
+Preset applies the same settings on any PC.
+
+On SteamOS or Bazzite, add GoldenEye 007.exe to Steam as a non-Steam game
+with Proton as its compatibility tool and run setup from there. Under Proton
+the game uses Vulkan by itself; Direct3D 12 there crashes on AMD.
+
 SPLIT-SCREEN
 ------------
 
