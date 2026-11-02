@@ -83,9 +83,16 @@ neither setup nor the game contacts Xbox Live.
   separate precise-aim sensitivity, invert look, mouse wheel zoom on the
   sniper rifle and the mouse in the menus and the pause watch
 - **Xbox controller** support, working alongside keyboard and mouse
+- **Split-screen** for 2 to 4 players on one PC (Multiplayer → Split
+  Screen), one controller each: every controller plugged in is its own
+  player, in the order they were connected, and the keyboard and mouse
+  count as player 1's controller. The game's own screen layouts (horizontal,
+  vertical, quarters) apply
 - **LAN multiplayer** (Multiplayer → LAN or Virtual LAN), and **online
   multiplayer** through virtual LAN services such as Radmin VPN, ZeroTier,
-  Tailscale and Hamachi
+  Tailscale and Hamachi. Players at one PC can join a LAN match together on
+  a split screen (the lobby's Screen Layout only splits the screen between
+  the players at that PC)
   ![Two players in a LAN match](docs/screenshots/lan-match.jpg)
 - **Settings menu** (Help & Options): Keyboard & Mouse, Video Settings
   (display mode, resolution, screen ratio, V-Sync, render scale, FSR
