@@ -80,6 +80,9 @@ void SetPointerVisibleHandler(std::function<void(bool)> handler);
 // config, and save-and-restart for settings read at startup.
 void SetNativeMenuCallbacks(std::function<void(bool)> fullscreen, std::function<void()> persist,
                             std::function<void()> restart);
+// Handheld preset and Wine (ge_native_menu.cpp): at start-up, once ge.toml is
+// loaded. True when a setting changed and ge.toml should be saved.
+bool ApplyDevicePreset();
 }
 
 namespace ge {
@@ -164,6 +167,12 @@ class GeApp : public rex::ReXApp {
   // OnCreateDialogs hands it to the GPU plugin before the emulated GPU starts.
   void OnPreSetup(rex::RuntimeConfig& config) override {
     ge::InstallCrashLog();
+    // A handheld (Legion Go, Steam Deck, ROG Ally) gets its preset the first
+    // time, and Wine or Proton gets Vulkan: before the renderer reads its API
+    // and the window its fullscreen setting. Saved in OnCreateDialogs, once
+    // the GPU plugin's own settings are registered too (saving now would
+    // drop them from ge.toml).
+    device_preset_changed_ = ge::ApplyDevicePreset();
     // gpu_native (the default): run detached ("bring your own renderer") - no GPU
     // plugin, the native backend (src/ge_native_gpu.cpp) draws the guest; false
     // loads the classic Xenos plugin.
@@ -307,7 +316,8 @@ class GeApp : public rex::ReXApp {
     // The game draws its own crosshair cursor in menus, so the Windows pointer
     // stays hidden except while the PC menu is open.
     if (window()) window()->SetCursorVisibility(rex::ui::Window::CursorVisibility::kHidden);
-    if (ge::MigrateKeymap()) PersistConfig();
+    const bool keymap_migrated = ge::MigrateKeymap();
+    if (keymap_migrated || device_preset_changed_) PersistConfig();
     // Windowed size chosen on the Video Settings page. The SDK's own
     // window_width/height stay 1280x720: it also uses them as the guest video
     // mode, which must not change.
@@ -393,6 +403,7 @@ class GeApp : public rex::ReXApp {
   }
 
   GeMenuDialog* menu_ = nullptr;  // non-owning; self-deletes via the drawer
+  bool device_preset_changed_ = false;  // ge.toml to save in OnCreateDialogs
   std::unique_ptr<ge::BackdropBars> backdrop_bars_;  // menu desk picture in side bars
   std::unique_ptr<ge::PostFxOverlay> postfx_;       // always-on filter layer
 };

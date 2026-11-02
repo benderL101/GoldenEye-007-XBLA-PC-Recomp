@@ -106,9 +106,13 @@ END
         Pop-Location
     }
 
+    # src\ge_device.cpp is shared with the game: the handheld check that ticks
+    # "start in fullscreen" on a Legion Go, Steam Deck or ROG Ally.
+    $gameSrc = Join-Path $projectRoot 'src'
     $sources = @(Get-ChildItem -LiteralPath $sourceDir -Filter *.cpp | ForEach-Object FullName)
+    $sources += Join-Path $gameSrc 'ge_device.cpp'
     & $clang /nologo /std:c++17 /O2 /MT /EHsc /W3 /DUNICODE /D_UNICODE /DNOMINMAX "/DGE_VERSION=$Version" `
-        "/I$sourceDir" "/Fo$work\" @sources "/Fe$output" /link /SUBSYSTEM:WINDOWS `
+        "/I$sourceDir" "/I$gameSrc" "/Fo$work\" @sources "/Fe$output" /link /SUBSYSTEM:WINDOWS `
         user32.lib gdi32.lib gdiplus.lib shell32.lib ole32.lib uuid.lib bcrypt.lib $resPath
     if ($LASTEXITCODE -ne 0) { throw 'clang-cl failed for the launcher' }
     Write-Host ('Built {0} ({1:N0} bytes)' -f (Split-Path -Leaf $output), (Get-Item -LiteralPath $output).Length)

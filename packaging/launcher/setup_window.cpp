@@ -14,6 +14,8 @@ using std::min;
 
 #include "launcher.h"
 
+#include "ge_device.h"
+
 #include <objidl.h>
 #include <gdiplus.h>
 #include <shellapi.h>
@@ -486,6 +488,10 @@ void SetupWindow::Start() {
   // switches it off.
   was_ = installed_ ? CurrentExtras(p_, options_.shortcut_folder) : Extras{};
   want_ = was_;
+  // On a handheld (Legion Go, Steam Deck, ROG Ally) a first setup starts the
+  // game in fullscreen, the same choice the game makes for itself there; the
+  // box can still be unticked.
+  if (!installed_ && DetectDevice().handheld) want_.fullscreen = true;
   if (!options_.package.empty()) {
     SelectPath(options_.package);
     return;

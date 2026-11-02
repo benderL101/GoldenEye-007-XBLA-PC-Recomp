@@ -44,6 +44,7 @@ set(GE_SOURCES
     src/ge_native_menu.cpp
     src/ge_portraits.cpp
     src/ge_gpu_detect.cpp
+    src/ge_device.cpp
     src/ge_native_probe.cpp
     src/ge_native_gpu.cpp
     src/ge_native_shaders.cpp
