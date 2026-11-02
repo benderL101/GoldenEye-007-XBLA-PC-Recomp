@@ -83,6 +83,11 @@ neither setup nor the game contacts Xbox Live.
   separate precise-aim sensitivity, invert look, mouse wheel zoom on the
   sniper rifle and the mouse in the menus and the pause watch
 - **Xbox controller** support, working alongside keyboard and mouse
+- **Gyro aiming** with any controller whose gyroscope the game can read (PS4
+  and PS5 pads, Switch Pro, the Steam Deck's own controls, handhelds presented
+  as one of those): tilting the pad turns the view, on top of the sticks, in
+  Help & Options → Keyboard & Mouse → Gyro Aiming, either always or only while
+  precise aim is held
 - **Split-screen** for 2 to 4 players on one PC (Multiplayer → Split
   Screen), one controller each: every controller plugged in is its own
   player, in the order they were connected, and the keyboard and mouse
@@ -127,6 +132,7 @@ neither setup nor the game contacts Xbox Live.
 | Escape, Enter | Start: pause with the watch menu; Escape is back in menus |
 | Tab | Objectives / scores |
 | Arrow keys | D-pad |
+| Tilt the controller | Gyro aiming, when it is on (Keyboard & Mouse → Gyro Aiming) |
 
 Keys can be changed in Help & Options → Keyboard & Mouse, or on the watch's
 Keyboard Controls page during a mission. An Xbox controller works as on the
@@ -176,6 +182,20 @@ is written at the top of every log.
 set up and play as on any PC, then add `GoldenEye 007.exe` to Legion Space,
 Armoury Crate or Steam as you like. An Xbox-style built-in controller works
 as on the console.
+
+**Gyro aiming on a handheld.** The preset turns on gyro aiming while precise
+aim is held. Whether the game can read the gyroscope depends on how the
+device presents its controls: the Steam Deck's are read directly, while the
+Legion Go's and the ROG Ally's are Xbox-style controllers, which carry no
+gyroscope data. On those, a tool that presents the device as a PlayStation
+controller gives the game a gyroscope it can read: Handheld Companion on
+Windows, Handheld Daemon (HHD) on Bazzite. Steam Input's and Legion Space's
+own "gyro as mouse" also works, through the game's mouse look, with no change
+here; use one or the other, not both. The newest `ge_NNN.log` says
+`gyroscope on` or `no gyroscope` for each controller as it is connected.
+Settings: `ge_gyro_mode` (`off`, `aim`, `always`), `ge_gyro_sens` (view
+degrees per pad degree, 1 = 1:1), `ge_gyro_yaw_axis` (`yaw` or `roll`),
+`ge_gyro_invert_y`, and `gyro_deadzone` in degrees per second.
 
 **SteamOS and Bazzite** (Steam Deck, Legion Go S with SteamOS, a Legion Go
 with Bazzite): extract the release in Desktop Mode, add `GoldenEye 007.exe`

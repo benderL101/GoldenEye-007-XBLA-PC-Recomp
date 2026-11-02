@@ -370,6 +370,12 @@ std::vector<Row> BuildPage(Page page) {
       rows.push_back(Row{RowKind::Toggle, "Mouse Look:", "ge_mouselook_enable"});
       AddSlider(rows, "Mouse Sensitivity:", "ge_mouse_sens", 0.1f, 5.0f, 0.05f);
       AddSlider(rows, "Precise Aim Sensitivity:", "ge_aim_sens", 0.1f, 1.5f, 0.05f);
+      // Gyro aiming (ge_hooks.cpp): a pad with a gyroscope turns the view.
+      AddChoice(rows, "Gyro Aiming:", "ge_gyro_mode",
+                {{"OFF", "off"}, {"While Aiming", "aim"}, {"Always", "always"}});
+      AddSlider(rows, "Gyro Sensitivity:", "ge_gyro_sens", 0.1f, 5.0f, 0.1f);
+      AddChoice(rows, "Gyro Turn Axis:", "ge_gyro_yaw_axis", {{"Yaw", "yaw"}, {"Roll", "roll"}});
+      rows.push_back(Row{RowKind::Toggle, "Invert Gyro Up/Down:", "ge_gyro_invert_y"});
       rows.push_back(Row{RowKind::Toggle, "Keyboard Controls:", "ge_keyboard_enable"});
       AddAction(rows, "Key Bindings: Movement", [] { g_page = Page::Bindings1; });
       AddAction(rows, "Key Bindings: Buttons", [] { g_page = Page::Bindings2; });
@@ -965,8 +971,8 @@ namespace ge {
 // The preset's values. Fullscreen on the handheld's own screen; the game drawn
 // at 1x (1280x720, which these chips hold at 60 FPS) and FSR stretching it to
 // the panel (2560x1600 on a Legion Go); no MSAA; the Screen Ratio following
-// the screen (16:9 on a 16:10 panel, with thin bars). V-Sync and texture
-// filtering keep their defaults.
+// the screen (16:9 on a 16:10 panel, with thin bars); gyro aiming while
+// precise aim is held. V-Sync and texture filtering keep their defaults.
 void ApplyHandheldPresetValues() {
   rex::cvar::SetFlagByName("fullscreen", "true");
   rex::cvar::SetFlagByName("ge_render_scale", "1");
@@ -974,6 +980,9 @@ void ApplyHandheldPresetValues() {
   rex::cvar::SetFlagByName("gpu_native_msaa", "1");
   rex::cvar::SetFlagByName("ge_screen_ratio", "auto");
   rex::cvar::SetFlagByName("ge_show_fps", "false");
+  // Gyro while aiming: inert on a pad without a gyroscope the runtime can
+  // read, so it costs nothing where it does not apply.
+  rex::cvar::SetFlagByName("ge_gyro_mode", "aim");
 }
 std::string HandheldPresetText() {
   if (GetS("ge_handheld_preset") == "applied") return "Applied";

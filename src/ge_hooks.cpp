@@ -25,6 +25,7 @@
 #include "ge_init.h"   // PPCRegister/PPCContext + generated function decls
 #include "ge_gpu_detect.h"  // DisplayRefreshHz
 #include <rex/cvar.h>  // REXCVAR_* (mouse-look settings)
+#include <rex/input/gyro.h>  // TakeGyro (gyro aiming)
 #include <rex/logging/api.h>  // FlushLogging (crash / closing lines)
 #include <rex/kernel/xam/ge_online_control.h>  // GeNetworkGameActive
 #include <rex/ui/keybinds.h>     // ParseVirtualKey (keyboard rebinding)
@@ -1509,6 +1510,26 @@ REXCVAR_DEFINE_BOOL(ge_aim_zoom_scaling, true, "Input",
 // play. OFF: no mouse-look, cursor free, controller only.
 REXCVAR_DEFINE_BOOL(ge_mouselook_enable, true, "Input",
                     "Mouse look (works alongside the controller; captures the cursor in-game)");
+// Gyro aiming: a gamepad's gyroscope turns the view, on top of the sticks and
+// the mouse, the way the mouse does (ge_mouse_camera). The runtime's SDL
+// driver reads the sensor (rex/input/gyro.h); this is what the game does with
+// it. "aim" turns only while precise aim (the left trigger) is held, which is
+// how most people want it on a handheld: steady on the hip, fine aim by
+// tilting. "always" is the full gyro-look.
+REXCVAR_DEFINE_STRING(ge_gyro_mode, "off", "Input",
+                      "Gyro aiming: off, always, or aim (only while precise aim is held)")
+    .allowed({"off", "always", "aim"});
+// Degrees the view turns per degree the pad turns (1 = real-world 1:1).
+REXCVAR_DEFINE_DOUBLE(ge_gyro_sens, 1.0, "Input",
+                      "Gyro aiming: degrees of view turn per degree of pad turn")
+    .range(0.1, 10.0);
+// Which rotation of the pad turns left and right: yaw (the pad turning flat,
+// like a steering wheel seen from above) suits a handheld held in front of
+// you; roll (tilting the pad's sides) suits a pad held low in the lap.
+REXCVAR_DEFINE_STRING(ge_gyro_yaw_axis, "yaw", "Input",
+                      "Gyro aiming: the pad rotation that turns the view sideways, yaw or roll")
+    .allowed({"yaw", "roll"});
+REXCVAR_DEFINE_BOOL(ge_gyro_invert_y, false, "Input", "Gyro aiming: tilting up looks down");
 
 namespace {
 std::atomic<int> g_mouse_dx{0};
@@ -2570,14 +2591,23 @@ void ge_mouse_camera(uint8_t* base) {
   const bool gun_sway = REXCVAR_GET(ge_gun_sway);
 
   // Consume this frame's raw mouse delta once; used for both menu and camera.
-  const float mdx = static_cast<float>(ge_take_mouse_dx());
-  const float mdy = static_cast<float>(ge_take_mouse_dy());
+  // With mouse look off this runs for the gyro alone: the mouse is left out
+  // (the cursor is not captured then, so there is little to take anyway).
+  const bool mouse_on = REXCVAR_GET(ge_mouselook_enable);
+  float mdx = static_cast<float>(ge_take_mouse_dx());
+  float mdy = static_cast<float>(ge_take_mouse_dy());
+  if (!mouse_on) mdx = mdy = 0.f;
+  // The pad's gyroscope, drained every frame so a turn made while the view is
+  // held (a level loading, a cutscene, the PC menu) is dropped, not saved up
+  // and applied as one jump when control returns. Applied below, with the
+  // mouse, once the gating is done.
+  const rex::input::GyroDelta gyro = rex::input::TakeGyro();
 
   // Move the menu selection crosshair (the game's own menus read these). While
   // the (hidden) Windows pointer is confined to the window, the crosshair sits
   // where that pointer is, so it moves with the Windows pointer speed and
   // acceleration. Otherwise raw deltas nudge it as before.
-  if (!ge_menu_cursor_from_pointer(base)) {
+  if (mouse_on && !ge_menu_cursor_from_pointer(base)) {
     float menuX = LDF32(base, GE_MENU_XY);
     float menuY = LDF32(base, GE_MENU_XY + 4);
     menuX += (mdx / 5.f) * menu_sensitivity;
@@ -2664,6 +2694,31 @@ void ge_mouse_camera(uint8_t* base) {
 
   if (game_control_disabled) return;
 
+  // Gyro aiming (ge_gyro_mode) joins the mouse here, as mouse counts: below,
+  // 10 counts turn one degree at mouse sensitivity 1, so a degree of pad turn
+  // becomes 10 * ge_gyro_sens counts whatever the mouse sensitivity, and the
+  // slower precise-aim multiplier is taken out again so the gyro turns the
+  // same on the hip and when aiming (the zoom scaling stays: a tilt moves the
+  // aim the same distance on screen at every zoom). Directions are the pad's
+  // own (turn left looks left, tilt the far edge up looks up), so the mouse
+  // Invert rows are undone and the gyro has its own.
+  const uint32_t aim_mode = LD32(base, player + GE_OFF_AIM_MODE);
+  {
+    const std::string& mode = REXCVAR_GET(ge_gyro_mode);
+    const bool gyro_on = (mode == "always" || (mode == "aim" && aim_mode == 1)) &&
+                         !g_mouselook_suppressed.load(std::memory_order_relaxed);
+    if (gyro_on) {
+      const float yaw = REXCVAR_GET(ge_gyro_yaw_axis) == "roll" ? gyro.roll_deg : gyro.yaw_deg;
+      float scale = 10.f * static_cast<float>(REXCVAR_GET(ge_gyro_sens)) /
+                    std::max(sensitivity, 0.001f);
+      if (aim_mode == 1)
+        scale /= std::max(static_cast<float>(REXCVAR_GET(ge_aim_sens)), 0.001f);
+      mdx += -yaw * scale * (invert_x ? -1.f : 1.f);
+      mdy += -gyro.pitch_deg * scale * (invert_y ? -1.f : 1.f) *
+             (REXCVAR_GET(ge_gyro_invert_y) ? -1.f : 1.f);
+    }
+  }
+
   // The ordinary camera yaw is rebuilt from the tank body + turret every
   // simulation tick, so writing player->vv_theta (the on-foot mouse path)
   // cannot turn the tank horizontally. Shift both the native turret target and
@@ -2698,7 +2753,6 @@ void ge_mouse_camera(uint8_t* base) {
     look_mdx = 0.f;  // do not also write the transient on-foot camera yaw
   }
 
-  const uint32_t aim_mode = LD32(base, player + GE_OFF_AIM_MODE);
   if (aim_mode != prev_aim_mode) {
     if (aim_mode != 0) {  // entering aim mode -> reset gun position
       STF32(base, player + GE_OFF_GUN_X, 0.f);
@@ -4401,7 +4455,8 @@ void ge_inject_keyboard(PPCRegister& /*r11*/) {
   // cursor is captured, so this is a no-op in menus / when unfocused.
   ge_start_mouse_once();
   ge_start_dam_spike_fix_once(base);
-  if (REXCVAR_GET(ge_mouselook_enable)) ge_mouse_camera(base);
+  if (REXCVAR_GET(ge_mouselook_enable) || REXCVAR_GET(ge_gyro_mode) != "off")
+    ge_mouse_camera(base);
 
   ge_script_apply(base);
   ge_watch_mouse(base);
